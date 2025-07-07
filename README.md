@@ -32,12 +32,18 @@ A simple and interactive web app designed to help children with dyslexia practic
 
 ## 🖼️ Screenshots
 
-| Letter Writing Practice | Voice Pronunciation Feedback |
-|--------------------------|------------------------------|
-| ![Letter Writing](images/letter_practice.png) | ![Voice Feedback](images/voice_feedback.png) |
+confusable letter practise -
+![WhatsApp Image 2025-05-18 at 22 43 12_92fccf93](https://github.com/user-attachments/assets/a8a27c61-ff77-402d-a03f-e2fa19c64388)
+
+spelling practise -
+![WhatsApp Image 2025-05-18 at 22 43 11_f0602ce8](https://github.com/user-attachments/assets/46de7d16-b7a0-4d40-a47c-72106a8c949e)
+
+dashboard - 
+![WhatsApp Image 2025-05-18 at 22 43 13_6ce25a11](https://github.com/user-attachments/assets/cf7acb73-f2a1-4034-b6d2-c31d0921c18e)
+
+
 
 ---
-
 ## 🛠️ Tech Stack
 
 - **Frontend:** HTML, CSS, JavaScript, Canvas API
@@ -49,10 +55,4 @@ A simple and interactive web app designed to help children with dyslexia practic
 
 ---
 
-## 🚀 How to Run Locally
-
-1. Clone the repo:
-   ```bash
-   git clone https://github.com/yourusername/dyslexiaat-ease.git
-   cd dyslexiaat-ease
 
