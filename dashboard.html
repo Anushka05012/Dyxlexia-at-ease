@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <style>
+    /* General Styles */
+    body {
+      font-family: "Comic Sans MS", cursive, sans-serif;
+      background-color: #f0f8ff;
+      padding: 30px;
+      text-align: center;
+      margin: 0;
+    }
+
+    h1, h2 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      color: #4CAF50;
+    }
+
+    .progress-container {
+      margin: 20px auto;
+      width: 80%;
+    }
+
+    .progress-bar-bg {
+      background-color: #ddd;
+      border-radius: 20px;
+      height: 30px;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(to right, #4CAF50, #8BC34A);
+      text-align: center;
+      line-height: 30px;
+      color: white;
+      border-radius: 15px;
+      transition: width 0.5s ease-in-out;
+      font-weight: bold;
+    }
+
+    .letter-grid, .digit-grid {
+      margin-top: 30px;
+      display: grid;
+      grid-template-columns: repeat(13, 30px);
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .letter-box, .digit-box {
+      width: 30px;
+      height: 30px;
+      line-height: 30px;
+      border-radius: 5px;
+      text-align: center;
+      font-weight: bold;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.2s ease-in-out;
+    }
+
+    .letter-box:hover, .digit-box:hover {
+      transform: scale(1.2);
+    }
+
+    .done {
+      background-color: #4CAF50;
+    }
+
+    .not-done {
+      background-color: #bbb;
+      cursor: not-allowed;
+    }
+
+    /* Progress Message */
+    #progressMessage {
+      margin-top: 10px;
+      font-size: 1rem;
+      font-weight: bold;
+      color: #4CAF50;
+    }
+
+    /* Responsive Layout */
+    @media (max-width: 600px) {
+      .letter-grid, .digit-grid {
+        grid-template-columns: repeat(7, 30px);
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      h2 {
+        font-size: 1.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Child Dashboard</h1>
+  <h2 id="childName"></h2>
+
+  <div class="progress-container">
+    <h3>Letter Writing Progress</h3>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="letterProgressBar">0%</div>
+    </div>
+  </div>
+
+  <div class="progress-container">
+    <h3>Digit Writing Progress</h3>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="digitProgressBar">0%</div>
+    </div>
+  </div>
+
+  <div id="progressMessage"></div>
+
+  <div class="letter-grid" id="letterGrid">
+    <!-- Filled by JS -->
+  </div>
+
+  <div class="digit-grid" id="digitGrid">
+    <!-- Filled by JS -->
+  </div>
+
+  <script>
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
+    const digits = "0123456789".split('');
+    const childName = localStorage.getItem("selectedChild") || "";
+    document.getElementById("childName").innerText = `Child: ${childName}`;
+
+    const totalLetters = letters.length;
+    const totalDigits = digits.length;
+    
+    if (!childName) {
+      alert("No child selected. Redirecting to login.");
+      window.location.href = "login.html";
+    } else {
+      // Fetch progress from Flask backend
+      fetch(`http://127.0.0.1:5000/get_progress?child=${childName}`)
+        .then(res => res.json())
+        .then(data => {
+          const lettersProgress = data.letters_progress || 0;
+          const digitsProgress = data.digits_progress || 0;
+
+          // Set letter progress bar
+          const letterPercent = Math.min((lettersProgress / totalLetters) * 100, 100);
+          const letterProgressBar = document.getElementById("letterProgressBar");
+          letterProgressBar.style.width = letterPercent + "%";
+          letterProgressBar.innerText = `${Math.floor(letterPercent)}%`;
+
+          // Set digit progress bar
+          const digitPercent = Math.min((digitsProgress / totalDigits) * 100, 100);
+          const digitProgressBar = document.getElementById("digitProgressBar");
+          digitProgressBar.style.width = digitPercent + "%";
+          digitProgressBar.innerText = `${Math.floor(digitPercent)}%`;
+
+          // Render letter grid
+          const letterGrid = document.getElementById("letterGrid");
+          letters.forEach((letter, index) => {
+            const box = document.createElement("div");
+            box.className = "letter-box " + (index < lettersProgress ? "done" : "not-done");
+            box.innerText = letter;
+            letterGrid.appendChild(box);
+          });
+
+          // Render digit grid
+          const digitGrid = document.getElementById("digitGrid");
+          digits.forEach((digit, index) => {
+            const box = document.createElement("div");
+            box.className = "digit-box " + (index < digitsProgress ? "done" : "not-done");
+            box.innerText = digit;
+            digitGrid.appendChild(box);
+          });
+        })
+        .catch(err => {
+          alert("Failed to load progress.");
+          console.error(err);
+        });
+    }
+  </script>
+</body>
+</html>

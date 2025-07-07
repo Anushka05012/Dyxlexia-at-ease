@@ -1,0 +1,202 @@
+<style>
+    body {
+      background-image: url('images/bg3.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+    }
+  </style>
+  
+  <!-- Image + Canvas -->
+  <div style="position: absolute; top: 10%; right: 500px; display: flex; align-items: center;">
+    <img id="referenceImage" src="images/letters/A.png" alt="Reference Letter" style="width: 300px; height: 500px; margin-right: 20px;">
+    <canvas id="drawCanvas" width="280" height="280" style="border:1px solid black; background:white;"></canvas>
+  </div>
+  
+  <!-- Buttons -->
+  <div style="position: absolute; top: 65%; right: 580px; text-align: center;">
+    <button onclick="clearCanvas()">Clear</button>
+    <button onclick="submitDrawing()">Submit</button>
+  </div>
+  
+  <!-- Result text -->
+  <p id="resultText" style="position: absolute; top: 70%; right: 560px; text-align: center;"></p>
+  
+  <script>
+    const canvas = document.getElementById('drawCanvas');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+  
+    // Load sounds
+    const greatJobSound = new Audio("sounds/great_job.mp3");
+    const tryAgainSound = new Audio("sounds/try_again.mp3");
+    const almostThereSound = new Audio("sounds/almost_there.mp3");
+  
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
+    let currentIndex = 0;
+  
+    // Set up canvas
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "black";
+    ctx.lineWidth = 20;
+  
+    // Mouse events
+    canvas.addEventListener('mousedown', () => drawing = true);
+    canvas.addEventListener('mouseup', () => drawing = false);
+    canvas.addEventListener('mouseout', () => drawing = false);
+    canvas.addEventListener('mousemove', draw);
+  
+    // Touch support for drawing
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  drawing = true;
+});
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  drawing = false;
+});
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (!drawing) return;
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.touches[0];
+  const x = touch.clientX - rect.left;
+  const y = touch.clientY - rect.top;
+  ctx.beginPath();
+  ctx.arc(x, y, 12, 0, 2 * Math.PI);
+  ctx.fill();
+});
+
+
+    function draw(e) {
+      if (!drawing) return;
+      ctx.beginPath();
+      ctx.arc(e.offsetX, e.offsetY, 12, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+  
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "black";
+      document.getElementById("resultText").innerText = "";
+    }
+  
+    function getSelectedChild() {
+      const child = localStorage.getItem("selectedChild");
+      if (!child) {
+        alert("No child selected. Please go to login.");
+        window.location.href = "login.html";
+      }
+      return child;
+    }
+  
+    function loadProgress() {
+  const child = getSelectedChild();
+  fetch(`http://127.0.0.1:5000/get_progress?child=${child}`)
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`Failed to fetch progress: ${res.status}`);
+      }
+      return res.json();
+    })
+    .then(data => {
+      console.log("Progress loaded:", data);  // Debugging line
+      currentIndex = data.letters_progress || 0;  // Adjust based on your data structure
+      updateReferenceImage();
+      clearCanvas();
+    })
+    .catch(err => {
+      alert("Failed to load progress: " + err);
+      console.error(err);
+    });
+}
+
+  
+function saveProgress(index) {
+    const child = getSelectedChild();
+    fetch('http://127.0.0.1:5000/update_progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            child: child,
+            progress: index,
+            type: 'letters'  // or 'digits', depending on what you are updating
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        console.log("Progress saved:", data);
+    })
+    .catch(err => {
+        alert("Failed to save progress.");
+        console.error(err);
+    });
+}
+
+  
+    function submitDrawing() {
+      const expectedLetter = letters[currentIndex];
+      const dataURL = canvas.toDataURL('image/png');
+  
+      fetch('http://127.0.0.1:5000/predict', {
+        method: 'POST',
+        body: JSON.stringify({ image: dataURL }),
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(res => res.json())
+      .then(data => {
+        const resultText = document.getElementById("resultText");
+  
+        if (data.prediction) {
+          const predictedLetter = data.prediction.toUpperCase();
+          const similarity = data.similarity;
+  
+          if (predictedLetter !== expectedLetter) {
+            tryAgainSound.play();
+            resultText.innerText = `Oops! You wrote "${predictedLetter}" but we are practicing "${expectedLetter}". Try again!`;
+          } else if (similarity < 90) {
+            almostThereSound.play();
+            resultText.innerText = `Nice try! You drew "${predictedLetter}" but you can do better. Try again! 💪`;
+          } else {
+            greatJobSound.play();
+            resultText.innerText = `🎉 Great job! You drew "${predictedLetter}" with ${similarity.toFixed(2)}% similarity.\nLet's move to the next letter.`;
+  
+            // Save progress and move to next letter
+            currentIndex++;
+            saveProgress(currentIndex);
+  
+            if (currentIndex < letters.length) {
+              setTimeout(() => {
+                updateReferenceImage();
+                clearCanvas();
+                resultText.innerText = "";
+              }, 2500);
+            } else {
+              resultText.innerText += `\nYou've completed all letters! 🎉`;
+            }
+          }
+        } else {
+          resultText.innerText = "Oops! Something went wrong: " + data.error;
+        }
+      })
+      .catch(err => {
+        alert("Prediction failed.");
+        console.error(err);
+      });
+    }
+  
+    function updateReferenceImage() {
+      const nextLetter = letters[currentIndex] || "A";
+      document.getElementById("referenceImage").src = `images/letters/${nextLetter}.png`;
+    }
+  
+    // Load progress when page loads
+    loadProgress();
+  </script>
+    

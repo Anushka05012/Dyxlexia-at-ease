@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Spelling Practice</title>
+  <link rel="stylesheet" href="common.css"/>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      background-image: url('images/bg3.jpg');
+      background-repeat: no-repeat;
+      background-size: cover;
+      background-position: center;
+      text-align: center;
+      padding: 20px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      padding: 30px;
+      margin-top: 100px;
+      background-color: #ffffff; /* solid white */
+      border-radius: 15px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      color: #ff6f61;
+    }
+
+    .instructions {
+      font-size: 1.2rem;
+      margin: 15px 0;
+      color: #333;
+    }
+
+    .word-box {
+      font-size: 2rem;
+      font-weight: bold;
+      margin: 30px 0;
+      background-color: #e0f7fa;
+      padding: 20px;
+      border-radius: 10px;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #00796b;
+    }
+
+    .feedback {
+      font-size: 1.5rem;
+      margin-top: 20px;
+      font-weight: bold;
+      color: #4caf50;
+      min-height: 40px;
+    }
+
+    .buttons button {
+      font-size: 1.2rem;
+      margin: 10px;
+      padding: 15px 25px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      color: white;
+      transition: opacity 0.2s;
+    }
+
+    .start-btn {
+      background-color: #ff9800;
+    }
+
+    .repeat-btn {
+      background-color: #03a9f4;
+    }
+
+    .say-btn {
+      background-color: #8bc34a;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .back-link {
+      display: block;
+      margin-top: 25px;
+      color: #888;
+      text-decoration: none;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    .emoji {
+      font-size: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🗣 Spelling Fun!</h1>
+
+    <div class="instructions" id="instructions">
+      Click <strong>"Start"</strong> to begin a new word.
+    </div>
+
+    <div class="word-box" id="current-word">Ready to play!</div>
+
+    <div class="buttons">
+      <button class="start-btn" onclick="startSession()">▶ Start</button>
+      <button class="repeat-btn" onclick="repeatWord()">🔊 Listen Again</button>
+      <button class="say-btn" onclick="recordPronunciation()">🎤 Say It</button>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <a class="back-link" href="index.html">⬅ Back to Home</a>
+  </div>
+
+  <script>
+    let currentWord = "";
+
+    async function startSession() {
+      const response = await fetch("http://localhost:5000/start_spelling_session");
+      const data = await response.json();
+      currentWord = data.word;
+
+      document.getElementById("instructions").textContent = "Press 🔊 to listen and 🎤 to say it aloud!";
+      document.getElementById("feedback").textContent = "";
+
+      speakAndShowWord(currentWord);
+    }
+
+    async function repeatWord() {
+      if (!currentWord) {
+        alert("Please press Start first!");
+        return;
+      }
+
+      speakAndShowWord(currentWord);
+    }
+
+    function speakAndShowWord(word) {
+      const wordBox = document.getElementById("current-word");
+      wordBox.textContent = word;
+
+      const utterance = new SpeechSynthesisUtterance(word);
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      speechSynthesis.speak(utterance);
+    }
+
+    let mediaRecorder;
+let audioChunks = [];
+
+async function recordPronunciation() {
+  if (!currentWord) {
+    alert("Please press Start first!");
+    return;
+  }
+
+  document.getElementById("feedback").textContent = "Listening...";
+
+  // Request mic access and record ~3 seconds
+  if (!mediaRecorder) {
+    let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+
+    mediaRecorder.ondataavailable = e => {
+      audioChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+      const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+      audioChunks = [];
+
+      // Prepare form data with expected_word and audio file
+      const formData = new FormData();
+      formData.append('expected_word', currentWord);
+      formData.append('audio', audioBlob, 'pronunciation.wav');
+
+      // Send to backend
+      const response = await fetch("http://localhost:5000/recognize_pronunciation", {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+      if (result.error) {
+        document.getElementById("feedback").textContent = "⚠ Error: " + result.error;
+      } else {
+        document.getElementById("feedback").innerHTML = result.feedback;
+      }
+    };
+  }
+
+// Start recording
+console.log("Starting recording...");
+mediaRecorder.start();
+
+setTimeout(() => {
+  console.log("Stopping recording...");
+  mediaRecorder.stop();
+}, 3000);
+}
+
+  </script>
+</body>
+</html>

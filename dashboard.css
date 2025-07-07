@@ -1,0 +1,125 @@
+@import url('common.css'); /* Import shared styles */
+
+/* Dashboard Layout */
+body {
+    background: linear-gradient(to right, #ff9a9e, #fad0c4);
+    display: flex;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 250px;
+    background: #ff6b6b;
+    color: white;
+    padding: 20px;
+    height: 100vh;
+    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar h2 {
+    text-align: center;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar ul li {
+    padding: 15px;
+    margin: 10px 0;
+    background: #ff8e8e;
+    border-radius: 10px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.sidebar ul li.active {
+    background: #ff4b4b;
+}
+
+/* Main Content */
+.main-content {
+    flex-grow: 1;
+    padding: 20px;
+}
+
+/* Header */
+header h1 {
+    font-size: 28px;
+    color: #fff;
+    background: #ff4b4b;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+/* Progress Section */
+.progress-section {
+    margin: 20px 0;
+}
+
+.progress-card {
+    background: #ffd166;
+    padding: 20px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.progress-bar {
+    background: #fff;
+    height: 10px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 10px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #ff6b6b;
+}
+
+/* Cards */
+.cards {
+    display: flex;
+    gap: 20px;
+    justify-content: space-between;
+}
+
+.card {
+    flex: 1;
+    padding: 20px;
+    border-radius: 15px;
+    color: white;
+    text-align: center;
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.letter-writing {
+    background: #ff6b6b;
+}
+
+.reading {
+    background: #6b8eff;
+}
+
+.rewards {
+    background: #ffcb6b;
+}
+
+/* Calendar */
+.calendar {
+    margin-top: 20px;
+    background: #6b8eff;
+    padding: 15px;
+    border-radius: 10px;
+    color: white;
+    text-align: center;
+}
+
+/* Adjusting dashboard container */
+.dashboard-container {
+    text-align: center;
+    margin-top: 80px;
+}

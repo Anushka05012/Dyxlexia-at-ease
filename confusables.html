@@ -1,0 +1,219 @@
+<style>
+  body {
+    background-image: url('images/bg3.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    font-family: 'Comic Sans MS', cursive, sans-serif;
+  }
+  .container {
+    position: absolute;
+    top: 10%;
+    right: 200px;
+    left: 200px;
+    display: flex;
+    align-items: center;
+    gap: 40px;
+  }
+  canvas {
+    border: 1px solid black;
+    background: white;
+  }
+  .buttons {
+    position: absolute;
+    top: 65%;
+    right: 580px;
+    text-align: center;
+    display: flex;
+    gap: 20px;
+  }
+  #resultText {
+    position: absolute;
+    top: 70%;
+    right: 560px;
+    text-align: center;
+    white-space: pre-line;
+    font-weight: bold;
+  }
+</style>
+
+<div class="container">
+  <div>
+    <img id="refImage1" src="images/small_letters/b.png" alt="Reference Letter 1" width="200" height="300" style="margin-bottom: 10px;">
+    <canvas id="canvas1" width="280" height="280"></canvas>
+  </div>
+  <div>
+    <img id="refImage2" src="images/small_letters/d.png" alt="Reference Letter 2" width="200" height="300" style="margin-bottom: 10px;">
+    <canvas id="canvas2" width="280" height="280"></canvas>
+  </div>
+</div>
+
+<div class="buttons">
+  <button onclick="clearBoth()">Clear Both</button>
+  <button onclick="submitBoth()">Submit Both</button>
+</div>
+
+<p id="resultText"></p>
+
+<script>
+  const lettersPairs = [
+    ['b', 'd'],
+    ['p', 'q'],
+    ['m', 'n'],
+    // Add more pairs as needed
+  ];
+
+  let currentPairIndex = 0;
+
+  // Canvas setup
+  function setupCanvas(id) {
+    const canvas = document.getElementById(id);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "black";
+    ctx.lineWidth = 20;
+    let drawing = false;
+
+    function draw(x, y) {
+      ctx.beginPath();
+      ctx.arc(x, y, 12, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+
+    // Mouse events
+    canvas.addEventListener('mousedown', () => drawing = true);
+    canvas.addEventListener('mouseup', () => drawing = false);
+    canvas.addEventListener('mouseout', () => drawing = false);
+    canvas.addEventListener('mousemove', e => {
+      if (!drawing) return;
+      draw(e.offsetX, e.offsetY);
+    });
+
+    // Touch events
+    canvas.addEventListener('touchstart', (e) => {
+      drawing = true;
+      e.preventDefault();
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      draw(touch.clientX - rect.left, touch.clientY - rect.top);
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (!drawing) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      draw(touch.clientX - rect.left, touch.clientY - rect.top);
+    });
+
+    canvas.addEventListener('touchend', () => drawing = false);
+
+    return ctx;
+  }
+
+  const ctx1 = setupCanvas('canvas1');
+  const ctx2 = setupCanvas('canvas2');
+
+  function clearBoth() {
+    [ctx1, ctx2].forEach(ctx => {
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.fillStyle = "black";
+    });
+    document.getElementById('resultText').innerText = "";
+  }
+
+  function updateReferenceImages() {
+    const [l1, l2] = lettersPairs[currentPairIndex];
+    document.getElementById('refImage1').src = `images/small_letters/${l1}.png`;
+    document.getElementById('refImage1').alt = `Reference Letter ${l1.toUpperCase()}`;
+    document.getElementById('refImage2').src = `images/small_letters/${l2}.png`;
+    document.getElementById('refImage2').alt = `Reference Letter ${l2.toUpperCase()}`;
+  }
+
+  async function submitBoth() {
+    const canvas1 = document.getElementById('canvas1');
+    const canvas2 = document.getElementById('canvas2');
+    const resultText = document.getElementById('resultText');
+
+    const img1 = canvas1.toDataURL('image/png');
+    const img2 = canvas2.toDataURL('image/png');
+
+    const [expected1, expected2] = lettersPairs[currentPairIndex].map(l => l.toUpperCase());
+
+    try {
+      const res1 = await fetch('http://127.0.0.1:5000/predict', {
+        method: 'POST',
+        body: JSON.stringify({ image: img1 }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data1 = await res1.json();
+
+      const res2 = await fetch('http://127.0.0.1:5000/predict', {
+        method: 'POST',
+        body: JSON.stringify({ image: img2 }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data2 = await res2.json();
+
+      let feedback = "";
+
+      if (!data1.prediction || !data2.prediction) {
+        feedback = "Oops! Prediction error. Please try again.";
+        resultText.innerText = feedback;
+        return;
+      }
+
+      const pred1 = data1.prediction.toUpperCase();
+      const pred2 = data2.prediction.toUpperCase();
+      const sim1 = data1.similarity;
+      const sim2 = data2.similarity;
+
+      if (pred1 !== expected1) {
+        feedback += `Left canvas: Expected "${expected1}" but got "${pred1}". Try again!\n`;
+      } else if (sim1 < 80) {
+        feedback += `Left canvas: Good, but similarity only ${sim1.toFixed(2)}%. Try to improve!\n`;
+      } else {
+        feedback += `Left canvas: Perfect! 🎉\n`;
+      }
+
+      if (pred2 !== expected2) {
+        feedback += `Right canvas: Expected "${expected2}" but got "${pred2}". Try again!\n`;
+      } else if (sim2 < 80) {
+        feedback += `Right canvas: Good, but similarity only ${sim2.toFixed(2)}%. Try to improve!\n`;
+      } else {
+        feedback += `Right canvas: Perfect! 🎉\n`;
+      }
+
+      resultText.innerText = feedback;
+
+      if (
+        pred1 === expected1 && sim1 >= 80 &&
+        pred2 === expected2 && sim2 >= 80
+      ) {
+        currentPairIndex++;
+
+        if (currentPairIndex < lettersPairs.length) {
+          setTimeout(() => {
+            updateReferenceImages();
+            clearBoth();
+            resultText.innerText = "";
+          }, 3000);
+        } else {
+          resultText.innerText += "\nYou've completed all confusable letter pairs! 🎉";
+        }
+      }
+
+    } catch (err) {
+      alert("Prediction failed. " + err);
+      console.error(err);
+    }
+  }
+
+  // Initial load
+  updateReferenceImages();
+  clearBoth();
+</script>
+
